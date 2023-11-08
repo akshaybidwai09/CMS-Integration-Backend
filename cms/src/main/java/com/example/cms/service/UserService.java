@@ -1,7 +1,7 @@
 package com.example.cms.service;
 
 import com.example.cms.UserApplication.User;
-import com.example.cms.UserApplication.UserRepository;
+import com.example.cms.DAO.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
