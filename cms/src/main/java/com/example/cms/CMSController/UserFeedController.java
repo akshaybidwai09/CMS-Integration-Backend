@@ -31,14 +31,20 @@ public class UserFeedController {
     public ResponseEntity<?> uploadFileAndText(
             @RequestParam("email") String email,
             @RequestParam("blogText") String blogText,
+            @RequestParam("category") String category,
             @RequestParam(value = "file", required = false) MultipartFile file) throws IOException {
         baseResponse = new BaseResponse();
         try {
             if (file != null && !file.isEmpty()) {
+
                 UserActivity userActivity = new UserActivity();
                 userActivity.setBlogText(blogText);
                 userActivity.setUploadedDate(new Date());
                 userActivity.setFile(new Binary(file.getBytes()));
+                if("video/mp4".equals(file.getContentType())){
+                    userActivity.setVideo(true);
+                }
+                userActivity.setCategory(category);
                 userService.addActivityToUserFeed(email, userActivity);
 
                 baseResponse.setStatusCode(HttpStatus.OK.value());

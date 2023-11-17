@@ -7,6 +7,25 @@ public class UserActivity {
     private String blogText;
     private Date uploadedDate;
     private Binary file; // Change the type to Binary for MongoDB storage
+    private String category;
+
+    private boolean isVideo;
+
+    public boolean isVideo() {
+        return isVideo;
+    }
+
+    public void setVideo(boolean video) {
+        isVideo = video;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
 
     public String getBlogText() {
         return blogText;
