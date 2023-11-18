@@ -4,21 +4,19 @@ import com.example.cms.ResponseHandler.BaseResponse;
 import com.example.cms.UserApplication.LoginDTO;
 import com.example.cms.UserApplication.RegistrationDTO;
 import com.example.cms.UserApplication.User;
-import com.example.cms.service.UserService;
+import com.example.cms.service.UserServiceimpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
-
 @RestController
 @RequestMapping("/api/auth")
 public class RegistrationController {
 
     @Autowired
-    private UserService userService;
+    private UserServiceimpl userServiceimpl;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -35,7 +33,7 @@ public class RegistrationController {
     public ResponseEntity<?> registerUser(@RequestBody RegistrationDTO registrationDTO) throws Exception{
         baseResponse = new BaseResponse();
         try {
-            User user = userService.registerUser(
+            User user = userServiceimpl.registerUser(
                     registrationDTO.getFirstName(),
                     registrationDTO.getLastName(),
                     registrationDTO.getDob(),
@@ -56,7 +54,7 @@ public class RegistrationController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginDTO loginDTO) {
-        User user = userService.findByEmail(loginDTO.getEmail());
+        User user = userServiceimpl.findByEmail(loginDTO.getEmail());
         if (user == null)
             return new ResponseEntity<>(baseResponse.failure("User does not exist please register!","Not Found",404),HttpStatus.NOT_FOUND);
         if (user != null && passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {

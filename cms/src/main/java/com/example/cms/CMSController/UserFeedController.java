@@ -1,10 +1,9 @@
 package com.example.cms.CMSController;
 import com.example.cms.DAO.UserActivity;
+import com.example.cms.DAO.UserFeed;
 import com.example.cms.ResponseHandler.BaseResponse;
-import com.example.cms.UserApplication.LoginDTO;
-import com.example.cms.UserApplication.User;
 import com.example.cms.UserApplication.UserFeedDTO;
-import com.example.cms.service.UserService;
+import com.example.cms.service.UserServiceimpl;
 import org.bson.types.Binary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,6 +14,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -23,7 +26,7 @@ import java.util.List;
 public class UserFeedController {
 
     @Autowired
-    private UserService userService;
+    private UserServiceimpl userServiceimpl;
 
     @Autowired
     public BaseResponse baseResponse;
@@ -39,13 +42,13 @@ public class UserFeedController {
 
                 UserActivity userActivity = new UserActivity();
                 userActivity.setBlogText(blogText);
-                userActivity.setUploadedDate(new Date());
+                userActivity.setUploadedDate(getCurrentDateUTC());
                 userActivity.setFile(new Binary(file.getBytes()));
                 if("video/mp4".equals(file.getContentType())){
                     userActivity.setVideo(true);
                 }
                 userActivity.setCategory(category);
-                userService.addActivityToUserFeed(email, userActivity);
+                userServiceimpl.addActivityToUserFeed(email, userActivity);
 
                 baseResponse.setStatusCode(HttpStatus.OK.value());
                 baseResponse.setStatusMessage("Content Successfully Posted!");
@@ -60,10 +63,16 @@ public class UserFeedController {
         return new ResponseEntity<>(baseResponse,HttpStatus.BAD_REQUEST);
     }
 
+    public Date getCurrentDateUTC() {
+        LocalDate todayLocal = LocalDate.now(ZoneId.systemDefault());
+        ZonedDateTime startOfDayUTC = todayLocal.atStartOfDay(ZoneId.of("UTC"));
+        return Date.from(startOfDayUTC.toInstant());
+    }
+
     @PostMapping("/get-user-feed")
-    public ResponseEntity<?> loginUser(@RequestBody UserFeedDTO userFeedDTO) {
+    public ResponseEntity<?> getUserFeed(@RequestBody UserFeedDTO userFeedDTO) {
         baseResponse = new BaseResponse();
-        List<UserActivity> userActivityList = userService.getUserActivityDetails(userFeedDTO);
+        List<UserActivity> userActivityList = userServiceimpl.getUserActivityDetails(userFeedDTO);
 
         if(userActivityList != null){
             baseResponse.setStatusCode(HttpStatus.OK.value());
@@ -75,17 +84,12 @@ public class UserFeedController {
         baseResponse.setStatusMessage("No Feed Against User");
         baseResponse.setError("No Feed Against User");
         return new ResponseEntity<>(baseResponse,HttpStatus.NOT_FOUND);
+    }
 
-//        User user = userService.findByEmail(loginDTO.getEmail());
-//        if (user == null)
-//            return new ResponseEntity<>(baseResponse.failure("User does not exist please register!","Not Found",404), HttpStatus.NOT_FOUND);
-//        if (user != null && passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
-//            // Handle successful login, e.g., creating a session or generating a JWT
-//            baseResponse.setStatusCode(HttpStatus.OK.value());
-//            baseResponse.setStatusMessage("User Logged in successfully.");
-//            baseResponse.setResponse(user);
-//            return new ResponseEntity<>(baseResponse, HttpStatus.OK);
-//        }
-//        return new ResponseEntity<>(baseResponse.failure("Wrong Password, Please try again!","Un Authorized",401),HttpStatus.UNAUTHORIZED);
+
+    @PostMapping("/get-users")
+    public ResponseEntity<?> getUsers(@RequestBody UserFeedDTO userFeedDTO) {
+        List<UserFeed> userFeeds = userServiceimpl.getUserActivityByCategory(userFeedDTO);
+        return userServiceimpl.getUsersByType(userFeeds,userFeedDTO.getType(),userFeedDTO.getFilterText());
     }
 }

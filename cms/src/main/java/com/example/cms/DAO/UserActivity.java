@@ -4,12 +4,22 @@ import org.bson.types.Binary; // Import Binary from the BSON library
 import java.util.Date;
 
 public class UserActivity {
+
+    private String userName;
     private String blogText;
     private Date uploadedDate;
     private Binary file; // Change the type to Binary for MongoDB storage
     private String category;
 
     private boolean isVideo;
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
 
     public boolean isVideo() {
         return isVideo;
