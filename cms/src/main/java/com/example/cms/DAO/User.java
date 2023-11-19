@@ -1,4 +1,4 @@
-package com.example.cms.UserApplication;
+package com.example.cms.DAO;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -9,7 +9,7 @@ import java.util.Date;
 
 @Data
 @Document
-public class User {
+public class User{
     @Id
     private String id;
     private String firstName;
@@ -17,6 +17,16 @@ public class User {
     private String email;
     private Date dob;
     private String password;
+    private boolean isActive;
+
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
 
     public String getFirstName() {
         return firstName;

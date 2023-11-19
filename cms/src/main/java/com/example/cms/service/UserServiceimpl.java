@@ -1,12 +1,11 @@
 package com.example.cms.service;
 
-import com.example.cms.DAO.UserActivity;
-import com.example.cms.DAO.UserFeed;
-import com.example.cms.DAO.UserFeedRepository;
+import com.example.cms.DAO.*;
 import com.example.cms.ResponseHandler.BaseResponse;
-import com.example.cms.UserApplication.User;
-import com.example.cms.DAO.UserRepository;
+import com.example.cms.UserApplication.RegistrationDTO;
 import com.example.cms.UserApplication.UserFeedDTO;
+import com.mongodb.client.result.UpdateResult;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -29,6 +28,9 @@ public class UserServiceimpl implements UserService {
     private UserRepository userRepository;
 
     @Autowired
+    private AdminRepository adminRepository;
+
+    @Autowired
     private UserFeedRepository userFeedRepository;
 
     @Autowired
@@ -43,21 +45,57 @@ public class UserServiceimpl implements UserService {
     public UserServiceimpl() {
         baseResponse = new BaseResponse();
     }
+    public User register(String firstName, String lastName, Date dob, String email, String password, boolean isAdmin) throws Exception {
+        validateEmail(email, isAdmin);
 
-    public User registerUser(String firstName, String lastName, Date dob, String email, String password) throws Exception {
-        if (userRepository.existsByEmail(email)) {
+        if (isAdmin) {
+            return registerAdmin(firstName, lastName, dob, email, password);
+        } else {
+            return registerUser(firstName, lastName, dob, email, password);
+        }
+    }
+
+    private void validateEmail(String email, boolean isAdmin) {
+        if (isAdmin) {
+            if (adminRepository.existsByEmail(email)) {
+                throw new RuntimeException("Email already in use.");
+            }
+        } else if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("Email already in use.");
         }
+    }
 
-        User newUser = new User();
-        newUser.setFirstName(firstName);
-        newUser.setLastName(lastName);
-        newUser.setDob(dob);
-        newUser.setEmail(email);
-        newUser.setPassword(passwordEncoder.encode(password));
+    private User registerUser(String firstName, String lastName, Date dob, String email, String password) {
+        User newUser = createUser(firstName, lastName, dob, email, password);
         return userRepository.save(newUser);
     }
 
+    private Admin registerAdmin(String firstName, String lastName, Date dob, String email, String password) {
+        Admin newAdmin = createAdmin(firstName, lastName, dob, email, password);
+        return adminRepository.save(newAdmin);
+    }
+
+    private User createUser(String firstName, String lastName, Date dob, String email, String password) {
+        User user = new User();
+        setUserDetails(user, firstName, lastName, dob, email, password);
+        return user;
+    }
+
+    private Admin createAdmin(String firstName, String lastName, Date dob, String email, String password) {
+        Admin admin = new Admin();
+        setUserDetails(admin, firstName, lastName, dob, email, password);
+        admin.setAdmin(true);
+        return admin;
+    }
+
+    private void setUserDetails(User user, String firstName, String lastName, Date dob, String email, String password) {
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setDob(dob);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setActive(true);
+    }
     public void addActivityToUserFeed(String email, UserActivity userActivity) {
         UserFeed userFeed = userFeedRepository.findByEmail(email);
         User user = userRepository.findByEmail(email);
@@ -222,6 +260,81 @@ public class UserServiceimpl implements UserService {
             baseResponse.setError("No Data Found");
             return new ResponseEntity<>(baseResponse, HttpStatus.NOT_FOUND);
         }
+    }
+
+    @Override
+    public ResponseEntity<?> registration(RegistrationDTO registrationDTO,boolean isAdmin) {
+        baseResponse = new BaseResponse();
+        try {
+            User user = register(
+                    registrationDTO.getFirstName(),
+                    registrationDTO.getLastName(),
+                    registrationDTO.getDob(),
+                    registrationDTO.getEmail(),
+                    registrationDTO.getPassword(),
+                    isAdmin
+            );
+            baseResponse.setStatusCode(HttpStatus.OK.value());
+            baseResponse.setStatusMessage("User registered successfully.");
+            baseResponse.setResponse(user);
+            return new ResponseEntity<>(baseResponse, HttpStatus.OK);
+        }catch (Exception e) {
+            baseResponse.setStatusCode(HttpStatus.BAD_REQUEST.value());
+            baseResponse.setStatusMessage("");
+            baseResponse.setError("User Already Exist Please Login!");
+            return new ResponseEntity<>(baseResponse,HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ResponseEntity<?> getUserAdmins(boolean admin) {
+        BaseResponse baseResponse = new BaseResponse();
+        try {
+            List<User> users = (List<User>) getAllMembers(admin);
+            baseResponse.setResponse(users);
+            baseResponse.setStatusCode(200);
+            baseResponse.setStatusMessage("Success");
+            return new ResponseEntity<>(baseResponse, HttpStatus.OK);
+        }catch (Exception e){
+            baseResponse.setStatusCode(HttpStatus.NO_CONTENT.value());
+            baseResponse.setStatusCode(204);
+            baseResponse.setError("No Users");
+            return new ResponseEntity<>(baseResponse,HttpStatus.NO_CONTENT);
+        }
+    }
+
+    @Override
+    public ResponseEntity<?> deactivateUser(String email, boolean isAdmin) {
+        BaseResponse baseResponse = new BaseResponse();
+        Query query = new Query(Criteria.where("email").is(email));
+        Update update = new Update().set("isActive", false);
+        try {
+            UpdateResult updateResult = null;
+            if (isAdmin) {
+                updateResult = mongoTemplate.upsert(query, update, Admin.class);
+            } else {
+                updateResult = mongoTemplate.upsert(query, update, User.class);
+            }
+            if (updateResult.wasAcknowledged() && updateResult.getModifiedCount()>0) {
+                baseResponse.setStatusCode(200);
+                baseResponse.setResponse("Success");
+                return new ResponseEntity<>(baseResponse, HttpStatus.OK);
+            }
+        }catch (Exception e){
+
+        }
+        baseResponse.setStatusCode(417);
+        baseResponse.setResponse("Failure to Deactivate. Either Member Does not Exist or Something Went Wrong ");
+        return new ResponseEntity<>(baseResponse,HttpStatus.EXPECTATION_FAILED);
+    }
+
+    @NotNull
+    private List<?> getAllMembers(boolean admin) {
+        Query query = new Query();
+        if (!admin)
+            return mongoTemplate.find(query,User.class);
+        return mongoTemplate.find(query,Admin.class);
+
     }
 
     private Date convertToDate(String dateString) {
