@@ -20,6 +20,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/userfeed")
@@ -35,7 +36,7 @@ public class UserFeedController {
             @RequestParam("email") String email,
             @RequestParam("blogText") String blogText,
             @RequestParam("category") String category,
-            @RequestParam(value = "file", required = false) MultipartFile file) throws IOException {
+            @RequestParam(value = "file", required = true) MultipartFile file) throws IOException {
         baseResponse = new BaseResponse();
         try {
             if (file != null && !file.isEmpty()) {
@@ -47,7 +48,7 @@ public class UserFeedController {
                 if("video/mp4".equals(file.getContentType())){
                     userActivity.setVideo(true);
                 }
-                userActivity.setCategory(category);
+                userActivity.setCategory(Character.toUpperCase(category.charAt(0)) + category.substring(1).toLowerCase());
                 userServiceimpl.addActivityToUserFeed(email, userActivity);
 
                 baseResponse.setStatusCode(HttpStatus.OK.value());
@@ -90,6 +91,9 @@ public class UserFeedController {
     @PostMapping("/get-users")
     public ResponseEntity<?> getUsers(@RequestBody UserFeedDTO userFeedDTO) {
         List<UserFeed> userFeeds = userServiceimpl.getUserActivityByCategory(userFeedDTO);
-        return userServiceimpl.getUsersByType(userFeeds,userFeedDTO.getType(),userFeedDTO.getFilterText());
+        List<UserFeed> activeUserFeeds = userFeeds.stream()
+                .filter(UserFeed::isActive)
+                .collect(Collectors.toList());
+        return userServiceimpl.getUsersByType(activeUserFeeds,userFeedDTO.getType(),userFeedDTO.getFilterText());
     }
 }

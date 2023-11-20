@@ -15,7 +15,17 @@ public class UserFeed {
 
     private String email;
 
+    private boolean isActive;
+
     private List<UserActivity> userFeed;
+
+    public boolean isActive() {
+        return isActive;
+    }
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
 
     public String getName() {
         return name;

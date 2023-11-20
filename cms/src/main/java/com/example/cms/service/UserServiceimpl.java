@@ -101,8 +101,10 @@ public class UserServiceimpl implements UserService {
         User user = userRepository.findByEmail(email);
         if (userFeed != null && userFeed.getUserFeed() !=null) {
             userFeed.getUserFeed().add(userActivity);
+            userFeed.setActive(user.isActive());
         } else {
             userFeed = new UserFeed();
+            userFeed.setActive(true);
             userFeed.setEmail(email);
             userFeed.setName(user.getFirstName());
             userFeed.setLastName(user.getLastName());
@@ -265,7 +267,13 @@ public class UserServiceimpl implements UserService {
     @Override
     public ResponseEntity<?> registration(RegistrationDTO registrationDTO,boolean isAdmin) {
         baseResponse = new BaseResponse();
+
         try {
+            if(!validteEmail(registrationDTO.getEmail())){
+                baseResponse.setStatusCode(HttpStatus.BAD_REQUEST.value());
+                baseResponse.setError("Current email is not valid, Make sure to use organization email!");
+                return new ResponseEntity<>(baseResponse,HttpStatus.BAD_REQUEST);
+            }
             User user = register(
                     registrationDTO.getFirstName(),
                     registrationDTO.getLastName(),
@@ -283,6 +291,29 @@ public class UserServiceimpl implements UserService {
             baseResponse.setStatusMessage("");
             baseResponse.setError("User Already Exist Please Login!");
             return new ResponseEntity<>(baseResponse,HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    public enum ValidEmailDomain {
+        ECHOSPHERE_COM;
+
+        @Override
+        public String toString() {
+            return name().replace("_", ".").toLowerCase();
+        }
+    }
+
+    private boolean validteEmail(String email) throws Exception {
+        String VALID_DOMAIN = ValidEmailDomain.ECHOSPHERE_COM.toString();
+        if (email == null || !email.contains("@")) {
+            return false;
+        }
+
+        String domain = email.substring(email.indexOf("@") + 1).toLowerCase();
+        if (domain.equals(VALID_DOMAIN)) {
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -314,6 +345,7 @@ public class UserServiceimpl implements UserService {
                 updateResult = mongoTemplate.upsert(query, update, Admin.class);
             } else {
                 updateResult = mongoTemplate.upsert(query, update, User.class);
+                mongoTemplate.upsert(query, update, UserFeed.class);
             }
             if (updateResult.wasAcknowledged() && updateResult.getModifiedCount()>0) {
                 baseResponse.setStatusCode(200);
