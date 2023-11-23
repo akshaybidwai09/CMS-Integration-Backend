@@ -31,4 +31,7 @@ public interface UserService {
     ResponseEntity<?> getUserAdmins(boolean admin);
 
     ResponseEntity<?> deactivateUser(String email, boolean admin);
+
+    ResponseEntity<?> addComments(UserFeedDTO userFeedDTO);
+
 }

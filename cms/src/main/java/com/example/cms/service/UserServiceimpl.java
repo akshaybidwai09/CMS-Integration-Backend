@@ -2,6 +2,7 @@ package com.example.cms.service;
 
 import com.example.cms.DAO.*;
 import com.example.cms.ResponseHandler.BaseResponse;
+import com.example.cms.UserApplication.Comment;
 import com.example.cms.UserApplication.RegistrationDTO;
 import com.example.cms.UserApplication.UserFeedDTO;
 import com.mongodb.client.result.UpdateResult;
@@ -15,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -182,10 +185,12 @@ public class UserServiceimpl implements UserService {
             case "category":
                 for (UserFeed userFeed : userFeeds) {
                     String userNameFromFeed = userFeed.getName();
+                    String userEmail = userFeed.getEmail();
                     List<UserActivity> matchingActivities = userFeed.getUserFeed().stream()
                             .filter(activity -> activity.getCategory().equals(filterText))
                             .map(activity -> {
                                 activity.setUserName(userNameFromFeed);
+                                activity.setEmail(userEmail);
                                 return activity;
                             })
                             .collect(Collectors.toList());
@@ -219,6 +224,7 @@ public class UserServiceimpl implements UserService {
                                 })
                                 .map(activity -> {
                                     activity.setUserName(userNameFromFeed);
+                                    activity.setEmail(userFeed.getEmail());
                                     return activity;
                                 })
                                 .collect(Collectors.toList());
@@ -238,9 +244,11 @@ public class UserServiceimpl implements UserService {
             case "all":
                 for (UserFeed userFeed : userFeeds) {
                     String userNameFromFeed = userFeed.getName();
+                    String email = userFeed.getEmail();
                     List<UserActivity> activities = userFeed.getUserFeed().stream()
                             .map(activity -> {
                                 activity.setUserName(userNameFromFeed);
+                                activity.setEmail(email);
                                 return activity;
                             })
                             .collect(Collectors.toList());
@@ -359,6 +367,47 @@ public class UserServiceimpl implements UserService {
         baseResponse.setResponse("Failure to Deactivate. Either Member Does not Exist or Something Went Wrong ");
         return new ResponseEntity<>(baseResponse,HttpStatus.EXPECTATION_FAILED);
     }
+
+    @Override
+    public ResponseEntity<?> addComments(UserFeedDTO userFeedDTO) {
+        BaseResponse baseResponse = new BaseResponse();
+        if(!CollectionUtils.isEmpty(userFeedDTO.getComment())) {
+            userFeedDTO.getComment().forEach((key, value) -> {
+                String userCommentEmail = key;
+                User user = userRepository.findByEmail(userCommentEmail);
+                Query query = new Query(Criteria.where("email").is(userFeedDTO.getEmail())
+                        .and("userFeed.id").is(userFeedDTO.getPostId()));
+
+                Comment comment = new Comment();
+                comment.setUser(user);
+                comment.setComment(value);
+                comment.setCommentDate(new Date());
+                Update update = new Update().push("userFeed.$.feedbacks", comment);
+                UpdateResult updateResult = mongoTemplate.updateFirst(query, update, UserFeed.class);
+                if (updateResult.wasAcknowledged() && updateResult.getModifiedCount() > 0) {
+                    baseResponse.setStatusCode(200);
+                    baseResponse.setResponse(comment);
+                }
+            });
+        }
+        return new ResponseEntity<>(baseResponse,HttpStatus.OK);
+    }
+
+//    @Override
+//    public ResponseEntity<?> addLikes(UserFeedDTO userFeedDTO) {
+//        UserActivity activity = userActivityRepository.findById(userFeedDTO.getPostId())
+//                .orElseThrow(() -> new ResourceNotFoundException("UserActivity not found for this id :: " + userFeedDTO.getPostId()));
+//
+//
+//        for (String userEmail : userFeedDTO.getLike()) {
+//            User user = /* Retrieve User object based on userEmail */;
+//            activity.getLikes().add(user);
+//        }
+//
+//        userActivityRepository.save(activity);
+//
+//        return ResponseEntity.ok().body("Likes added successfully");
+//    }
 
     @NotNull
     private List<?> getAllMembers(boolean admin) {

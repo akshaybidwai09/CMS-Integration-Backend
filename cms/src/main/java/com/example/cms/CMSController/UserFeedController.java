@@ -20,6 +20,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -43,6 +44,7 @@ public class UserFeedController {
 
                 UserActivity userActivity = new UserActivity();
                 userActivity.setBlogText(blogText);
+                userActivity.setId(UUID.randomUUID().toString());
                 userActivity.setUploadedDate(getCurrentDateUTC());
                 userActivity.setFile(new Binary(file.getBytes()));
                 if("video/mp4".equals(file.getContentType())){
@@ -57,6 +59,7 @@ public class UserFeedController {
                 return new ResponseEntity<>(baseResponse, HttpStatus.OK);
             }
         }catch (Exception e){
+            e.getMessage();
         }
         baseResponse.setStatusCode(HttpStatus.BAD_REQUEST.value());
         baseResponse.setStatusMessage("");
@@ -96,4 +99,17 @@ public class UserFeedController {
                 .collect(Collectors.toList());
         return userServiceimpl.getUsersByType(activeUserFeeds,userFeedDTO.getType(),userFeedDTO.getFilterText());
     }
+
+    @PostMapping("/add-comment")
+    public ResponseEntity<?> addComments(@RequestBody UserFeedDTO userFeedDTO) {
+        return userServiceimpl.addComments(userFeedDTO);
+    }
+
+//    @PostMapping("/add-like")
+//    public ResponseEntity<?> addLikes(@RequestBody UserFeedDTO userFeedDTO) {
+//
+//        return userServiceimpl.addLikes();
+//    }
+
+
 }
