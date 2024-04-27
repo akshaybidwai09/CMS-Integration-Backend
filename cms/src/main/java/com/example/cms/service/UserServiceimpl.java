@@ -297,7 +297,7 @@ public class UserServiceimpl implements UserService {
         }catch (Exception e) {
             baseResponse.setStatusCode(HttpStatus.BAD_REQUEST.value());
             baseResponse.setStatusMessage("");
-            baseResponse.setError("User Already Exist Please Login!");
+            baseResponse.setError("User Already Exist Please try Logging in!");
             return new ResponseEntity<>(baseResponse,HttpStatus.BAD_REQUEST);
         }
     }
