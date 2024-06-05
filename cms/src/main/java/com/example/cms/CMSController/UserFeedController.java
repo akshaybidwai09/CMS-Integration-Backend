@@ -97,7 +97,7 @@ public class UserFeedController {
         List<UserFeed> activeUserFeeds = userFeeds.stream()
                 .filter(UserFeed::isActive)
                 .collect(Collectors.toList());
-        return userServiceimpl.getUsersByType(activeUserFeeds,userFeedDTO.getType(),userFeedDTO.getFilterText());
+        return userServiceimpl.getUsersByType(activeUserFeeds,userFeedDTO.getType(),userFeedDTO.getFilterText().trim());
     }
 
     @PostMapping("/add-comment")

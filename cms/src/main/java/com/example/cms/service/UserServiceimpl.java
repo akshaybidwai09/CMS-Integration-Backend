@@ -103,8 +103,14 @@ public class UserServiceimpl implements UserService {
         UserFeed userFeed = userFeedRepository.findByEmail(email);
         User user = userRepository.findByEmail(email);
         if (userFeed != null && userFeed.getUserFeed() !=null) {
-            userFeed.getUserFeed().add(userActivity);
-            userFeed.setActive(user.isActive());
+            List<UserActivity> activities = userFeed.getUserFeed();
+            userFeed.setActive(true);
+            userFeed.setEmail(email);
+            userFeed.setName(user.getFirstName());
+            userFeed.setLastName(user.getLastName());
+            userActivity.setUserName(userFeed.getName());
+            activities.add(userActivity);
+            userFeed.setUserFeed(activities);
         } else {
             userFeed = new UserFeed();
             userFeed.setActive(true);
@@ -112,6 +118,7 @@ public class UserServiceimpl implements UserService {
             userFeed.setName(user.getFirstName());
             userFeed.setLastName(user.getLastName());
             List<UserActivity> activities = new ArrayList<>();
+            userActivity.setUserName(userFeed.getName());
             activities.add(userActivity);
             userFeed.setUserFeed(activities);
         }
@@ -235,11 +242,20 @@ public class UserServiceimpl implements UserService {
                 }
                 break;
             case "name":
-                userFeeds.stream()
-                        .filter(feed -> feed.getName() != null && feed.getName().equalsIgnoreCase(filterText))
-                        .findFirst()
-                        .ifPresent(feed -> namedUsers.add(feed));
-                baseResponse.setResponse(namedUsers);
+                for (UserFeed userFeed : userFeeds) {
+                    String userNameFromFeed = userFeed.getName();
+                    String userEmail = userFeed.getEmail();
+                    List<UserActivity> matchingActivities = userFeed.getUserFeed().stream()
+                            .filter(activity -> activity.getUserName().equals(filterText))
+                            .map(activity -> {
+                                activity.setUserName(userNameFromFeed);
+                                activity.setEmail(userEmail);
+                                return activity;
+                            })
+                            .collect(Collectors.toList());
+                    filteredActivities.addAll(matchingActivities);
+                    baseResponse.setResponse(filteredActivities);
+                }
                 break;
             case "all":
                 for (UserFeed userFeed : userFeeds) {
@@ -318,7 +334,7 @@ public class UserServiceimpl implements UserService {
         }
 
         String domain = email.substring(email.indexOf("@") + 1).toLowerCase();
-        if (domain.equals(VALID_DOMAIN)) {
+        if (domain.equalsIgnoreCase(VALID_DOMAIN)) {
             return true;
         } else {
             return false;
